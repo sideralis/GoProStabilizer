@@ -26,16 +26,21 @@ if __name__ == '__main__':
         cur_grey = cv2.cvtColor(cur, cv2.COLOR_BGR2GRAY)
         
         # Vector from prev to cur  
-        prev_corner2 = []
-        cur_corner2 = []      
         prev_corner = cv2.goodFeaturesToTrack(prev_grey,200,0.01,30)
         cur_corner,status,err = cv2.calcOpticalFlowPyrLK(prev_grey, cur_grey, prev_corner)
         
+        prev_corner2 = numpy.ndarray((1,1,2));
+        cur_corner2 = numpy.ndarray((1,1,2));
+        first = False
         # Weed out bad matches
-        for st in status:
+        for i,st in enumerate(status):
             if (st == 1):
-                # stack
-                # prev_corner2.append(prev_corner) 
-                pass
+                if (first == False):
+                    prev_corner2[0] = prev_corner[0]
+                    cur_corner2[0] = cur_corner[0]
+                    first = True
+                else:
+                    prev_corner2 = numpy.vstack((prev_corner2,prev_corner[i].reshape((1,1,2)))) 
+                    cur_corner2 = numpy.vstack((cur_corner2,cur_corner[i].reshape((1,1,2))))
         ret = cv2.estimateRigidTransform(prev_corner2, cur_corner2, False)       
         
