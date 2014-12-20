@@ -42,5 +42,8 @@ if __name__ == '__main__':
                 else:
                     prev_corner2 = numpy.vstack((prev_corner2,prev_corner[i].reshape((1,1,2)))) 
                     cur_corner2 = numpy.vstack((cur_corner2,cur_corner[i].reshape((1,1,2))))
-        ret = cv2.estimateRigidTransform(prev_corner2, cur_corner2, False)       
+        cur_corner2 = cur_corner2.astype(numpy.int)
+        prev_corner2 = prev_corner2.astype(numpy.int)
+        ret = cv2.estimateRigidTransform(prev_corner2, cur_corner2, False)  
+        print ret     
         
