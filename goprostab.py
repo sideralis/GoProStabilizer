@@ -8,6 +8,9 @@ import numpy
 import math
 import copy
 
+SMOOTHING_RADIUS = 30
+HORIZONTAL_BORDER_CROP = 20
+
 class TransformParam:
     def __init__(self,dx,dy,da):
         self.dx = dx
@@ -72,16 +75,101 @@ if __name__ == '__main__':
         prev_to_cur_transform.append(TransformParam(dx,dy,da))
         
         print k, dx, dy, da
-        prev = copy.copy(cur)       # maybe deepcopy ?
+        prev = cur.copy()
+        #prev = copy.copy(cur)       # maybe deepcopy ?
         prev_grey = copy.copy(cur_grey)
         
         k = k + 1
         
     # Step 2 - Accumulate the transformations to get the image trajectory
-    pass
+    print "=============2================"
+    a = x = y = 0
+    trajectory = []
+    for t in prev_to_cur_transform:
+        x += t.dx
+        y += t.dy
+        a += t.da
+        
+        trajectory.append(TransformParam(x,y,a))
+        
+        print x,y,a
+        
+    # Step 3 - Smooth out the trajectory using an averaging window
+    print "=============3================"
+    smoothed_trajectory = []
+    
+    for i,t in enumerate(trajectory):
+        sum_x = sum_y = sum_a = 0
+        count = 0
+            
+        for j in xrange(-SMOOTHING_RADIUS,SMOOTHING_RADIUS):
+            if ((i+j >= 0) and (i+j < len(trajectory))):
+                sum_x += trajectory[i+j].dx
+                sum_y += trajectory[i+j].dy
+                sum_a += trajectory[i+j].da
+                
+                count += 1
+        
+        avg_a = sum_a / count
+        avg_x = sum_x / count
+        avg_y = sum_y / count
+        
+        smoothed_trajectory.append(TransformParam(avg_x,avg_y,avg_a))
+        print avg_x,avg_y,avg_a
+        
+    # Step 4 - Generate new set of previous to current transform, such that the trajectory ends up being the same as the smoothed trajectory
+    print "=============4================"
+    new_prev_to_cur_transform = []
+    a = y = x = 0
+    
+    for i,t in enumerate(prev_to_cur_transform):
+        x += t.dx
+        y += t.dy
+        a += t.da
+        
+        diff_x = smoothed_trajectory[i].dx - x
+        diff_y = smoothed_trajectory[i].dy - y
+        diff_a = smoothed_trajectory[i].da - a
+        
+        dx = t.dx + diff_x
+        dy = t.dy + diff_y
+        da = t.da + diff_a
+        
+        new_prev_to_cur_transform.append(TransformParam(dx,dy,da))
+        
+        print dx,dy,da
+        
+    # Step 5 - Apply the new transformation to the video
+    print "=============5==============="
+    cap.set(cv2.cv.CV_CAP_PROP_POS_FRAMES, 0)
+    
+    vert_border = HORIZONTAL_BORDER_CROP * prev.shape[0] / prev.shape[1]    # get the aspect ratio correct
+
+    k = 0
+    T = numpy.double([[0,0,0],[0,0,0]])
+    
+    while (k < max_frames-1):
+        ret,cur = cap.read()
+ 
+        if ((ret == False) and (cur == None)):
+            break
+        T[0][0] = math.cos(new_prev_to_cur_transform[k].da)
+        T[0][1] = -math.sin(new_prev_to_cur_transform[k].da)
+        T[1][0] = math.sin(new_prev_to_cur_transform[k].da)
+        T[1][1] = math.cos(new_prev_to_cur_transform[k].da)
+        T[0][2] = new_prev_to_cur_transform[k].dx
+        T[1][2] = new_prev_to_cur_transform[k].dy
+    
+        cur2 = cv2.warpAffine(cur,T,cur.shape[0:2])
         
         
+        # Resize cur2 back to cur size, for better side by side comparison
         
-        
+        # Now draw the original an                     d stablised side by side for coolness
+        print "Starting show"
+        cv2.imshow("GoProStab",cur2)
+        print "Ending show"
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         
         
