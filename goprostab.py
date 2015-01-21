@@ -7,6 +7,7 @@ import cv2
 import numpy
 import math
 import copy
+import sys
 
 SMOOTHING_RADIUS = 30
 HORIZONTAL_BORDER_CROP = 20
@@ -148,7 +149,15 @@ if __name__ == '__main__':
     k = 0
     T = numpy.double([[0,0,0],[0,0,0]])
     
+    #out = cv2.VideoWriter('output.avi',cv2.cv.FOURCC('Y', 'U', 'V', '9'),59.0,(1280,720),1)
+    out = cv2.VideoWriter('output.avi',-1,59.0,(1280,720),1)
+    if (out.isOpened() == False):
+        print "Error"
+        sys.exit()
+            
+    print "Writing result video"
     while (k < max_frames-1):
+        print "{}".format(max_frames-k)
         ret,cur = cap.read()
  
         if ((ret == False) and (cur == None)):
@@ -165,11 +174,15 @@ if __name__ == '__main__':
         
         # Resize cur2 back to cur size, for better side by side comparison
         
-        # Now draw the original an                     d stablised side by side for coolness
-        print "Starting show"
+        # Now draw the original and stablised side by side for coolness
         cv2.imshow("GoProStab",cur2)
-        print "Ending show"
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.waitKey(10)
         
+        out.write(cur2)
+        k += 1
+
+    cv2.destroyAllWindows()
+    
+    cap.release()
+    out.release()
         
